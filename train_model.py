@@ -29,9 +29,7 @@ optimizer = optim.SGD(dbslayer.parameters(), lr=0.01)
 # training_data = training_data_0 + training_data_1
 
 training_data = torch.load('male_pbs2dbs.pt')
-data_loader = torch.utils.data.DataLoader(training_data,
-                                      batch_size=1,
-                                      shuffle=True)
+data_loader = torch.utils.data.DataLoader(training_data, batch_size=1, shuffle=True)
 del training_data
 total_loss = []
 
