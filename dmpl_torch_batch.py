@@ -160,7 +160,11 @@ class DMPLModel(Module):
         torch.zeros((batch_num, R_cube.shape[1], 3, 3), dtype=torch.float64)).to(self.device)
       lrotmin = (R_cube - I_cube).reshape(batch_num, -1, 1).squeeze(dim=2)
       v_posed = v_shaped + torch.tensordot(lrotmin, self.posedirs, dims=([1], [2]))
-
+    
+    dbs = torch.tensordot(self.dmpls_eig, dmpls, dims=([2],[1]))
+    dbs = dbs.permute(2,0,1)
+    v_posed += dbs
+    
     results = []
     results.append(
       self.with_zeros(torch.cat((R_cube_big[:, 0], torch.reshape(J[:, 0, :], (-1, 3, 1))), dim=2))
@@ -202,9 +206,9 @@ class DMPLModel(Module):
     # print(self.joint_regressor.shape)
     # joints = torch.tensordot(result, self.joint_regressor, dims=([1], [0])).transpose(1, 2)
     
-    dbs = torch.tensordot(self.dmpls_eig, dmpls, dims=([2],[1]))
-    dbs = dbs.permute(2,0,1)
-    result += dbs
+    # dbs = torch.tensordot(self.dmpls_eig, dmpls, dims=([2],[1]))
+    # dbs = dbs.permute(2,0,1)
+    # result += dbs
     return result
 
 

@@ -143,7 +143,9 @@ class DMPLModel(Module):
         torch.zeros((R_cube.shape[0], 3, 3), dtype=torch.float64)).to(self.device)
       lrotmin = torch.reshape(R_cube - I_cube, (-1, 1)).squeeze()
       v_posed = v_shaped + torch.tensordot(self.posedirs, lrotmin, dims=([2], [0]))
-
+    
+    v_posed += torch.tensordot(self.dmpls_eig, dmpls, dims=1)
+    
     results = []
     results.append(
       self.with_zeros(torch.cat((R_cube_big[0], torch.reshape(J[0, :], (3, 1))), dim=1))
@@ -179,7 +181,6 @@ class DMPLModel(Module):
     v = torch.matmul(T, torch.reshape(rest_shape_h, (-1, 4, 1)))
     v = torch.reshape(v, (-1, 4))[:, :3]
     result = v + torch.reshape(trans, (1, 3))
-    result += torch.tensordot(self.dmpls_eig, dmpls, dims=1)
     
     return result
 

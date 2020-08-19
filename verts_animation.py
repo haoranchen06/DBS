@@ -14,8 +14,15 @@ from tvtk.common import configure_input
 import pickle
 import torch
 
+import cv2
+import numpy as np
+import os
+from os.path import isfile, join
+import os
+import glob
+
     
-def verts_animation(verts):
+def verts_animation(verts, jpg_dir=None):
     verts = verts.detach().cpu().numpy()
     f = open('./body_models/smpl/male/model.pkl', 'rb')
     params = pickle.load(f)
@@ -34,14 +41,40 @@ def verts_animation(verts):
     fig = mlab.figure(bgcolor=(1,1,1))
     fig.scene.add_actor(actor)
     
-    @mlab.animate(delay=40, ui=False)
+    @mlab.animate(delay=20, ui=False)
     def animation():
         for i in count():
             frame = i % len(verts)
             pd.points = verts[frame]
             fig.scene.render()
+            if jpg_dir:
+                mlab.savefig(jpg_dir.format(frame),magnification=5)
             yield
 
     a = animation()
-    fig.scene.z_minus_view()
+        
+    # if not jpg_dir:
+    fig.scene.z_plus_view()
     mlab.show()
+
+
+def png2video(pathIn):
+    pathOut = 'video.avi'
+    fps = 60
+    frame_array = []
+    files = [f for f in os.listdir(pathIn) if isfile(join(pathIn, f))]
+    files.sort(key = lambda x: int(x[10:-4]))
+    for i in range(len(files)):
+        filename=pathIn + files[i]
+        img = cv2.imread(filename)
+        height, width, layers = img.shape
+        size = (width,height)
+        
+        frame_array.append(img)
+    out = cv2.VideoWriter(pathOut,cv2.VideoWriter_fourcc(*'DIVX'), fps, size)
+    for i in range(len(frame_array)):
+        out.write(frame_array[i])
+    out.release()
+
+if __name__ == '__main__':
+    png2video('./dbs_obj/dbs/')

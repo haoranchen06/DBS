@@ -4,10 +4,11 @@ import torch
 from torch.nn import Module
 import os
 from time import time
-from dbs_lstm import DBS_lstm
+from dbs_layer import DBS_lstm, DBS_gru, DBS_tcn
 
 class DBSModel(Module):
-  def __init__(self, device=None, model_path='./body_models/smpl/male/model.pkl'):
+  def __init__(self, device=None, model_path='./body_models/smpl/male/model.pkl',\
+               dbs_type='tcn',num_c=[512,768,1024],hd=1024,num_sk=5,dbs_model_path=None):
     
     super(DBSModel, self).__init__()
     with open(model_path, 'rb') as f:
@@ -32,15 +33,24 @@ class DBSModel(Module):
     self.device = device if device is not None else torch.device('cpu')
     for name in ['J_regressor', 'joint_regressor', 'weights', 'posedirs', 'v_template', 'shapedirs']:
       _tensor = getattr(self, name)
-      # print(' Tensor {} shape: '.format(name), _tensor.shape)
+      # print('Tensor {} shape: '.format(name), _tensor.shape)
       setattr(self, name, _tensor.to(device))
     
-    dbs_layer = DBS_lstm(input_dim=82,hidden_dim=1024)
-    dbs_layer.load_state_dict(torch.load('./body_models/dbs/male/dbs_lstm_1024.pt'))
-    dbs_layer.eval()
+    if dbs_type == 'lstm':
+        dbs_layer = DBS_lstm(input_dim=289,hidden_dim=hd,num_stacks=num_sk)
+    elif dbs_type == 'gru':
+        dbs_layer = DBS_gru(input_dim=289,hidden_dim=hd,num_stacks=num_sk)
+    elif dbs_type == 'tcn':
+        dbs_layer = DBS_tcn(input_size=289, output_size=6890*3, num_channels=num_c)
+    else:
+        raise AssertionError('dbs_type is wrong')
+    
     self.dbs_layer = dbs_layer.to(device)
     
-    # self.dmpls_eig *= 2
+    if dbs_model_path is not None:
+        self.load_state_dict(torch.load(dbs_model_path))
+        self.eval()
+    
 
   @staticmethod
   def rodrigues(r):
@@ -165,7 +175,13 @@ class DBSModel(Module):
         torch.zeros((batch_num, R_cube.shape[1], 3, 3), dtype=torch.float64)).to(self.device)
       lrotmin = (R_cube - I_cube).reshape(batch_num, -1, 1).squeeze(dim=2)
       v_posed = v_shaped + torch.tensordot(lrotmin, self.posedirs, dims=([1], [2]))
-
+      # print(lrotmin.shape, self.posedirs.shape)
+    
+    R_pose = R_cube.reshape(batch_num, -1, 1).squeeze(dim=2)
+    pose_beta_seq = torch.cat((R_pose, pose, betas),1)
+    dbs = self.dbs_layer(pose_beta_seq)
+    v_posed += dbs
+    
     results = []
     results.append(
       self.with_zeros(torch.cat((R_cube_big[:, 0], torch.reshape(J[:, 0, :], (-1, 3, 1))), dim=2))
@@ -207,29 +223,29 @@ class DBSModel(Module):
     # print(self.joint_regressor.shape)
     # joints = torch.tensordot(result, self.joint_regressor, dims=([1], [0])).transpose(1, 2)
         
-    pose_beta_seq = torch.cat((pose, betas),1)
-    dbs = self.dbs_layer(pose_beta_seq)
-    result += dbs
-    result -= dbs
+    # pose_beta_seq = torch.cat((pose, betas),1)
+    # dbs = self.dbs_layer(pose_beta_seq)
+    # result += dbs
     
     return result
 
 
 def test_gpu(gpu_id=[0]):
-  if len(gpu_id) > 0 and torch.cuda.is_available():
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id[0])
-    device = torch.device('cuda')
-  else:
-    device = torch.device('cpu')
+  # if len(gpu_id) > 0 and torch.cuda.is_available():
+  #   os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_id[0])
+  #   device = torch.device('cuda')
+  # else:
+  #   device = torch.device('cpu')
   #print(device)
   
-  num_frames = 30
+  device = torch.device('cpu')
+  num_frames = 10
   
   pose_size = 72
   beta_size = 10
 
   np.random.seed(9608)
-  model = DBSModel(device=device)
+  model = DBSModel(device=device, dbs_type='lstm')
   for i in range(10):
       pose = torch.from_numpy((np.random.rand(num_frames, pose_size) - 0.5) * 0.4)\
               .type(torch.float64).to(device)
@@ -247,4 +263,5 @@ def test_gpu(gpu_id=[0]):
 
 
 if __name__ == '__main__':
-  test_gpu([1])
+  # test_gpu([1])
+  model = DBSModel(device=torch.device('cpu'), dbs_type='lstm')
