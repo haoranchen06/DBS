@@ -1,2 +1,4 @@
 # DBS
- dynamic body shape
+Dynamic human body shape model
+
+`pip install numpy`
