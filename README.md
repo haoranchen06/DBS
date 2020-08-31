@@ -7,7 +7,7 @@ This project provides a dynamic human body shape model (DBS) based on the state 
 
 ## Sample animation
 <p float="center">
-  <img src="https://s8.gifyu.com/images/dbs_sample_gif.gif" width="50%" />
+  <img src="https://i.makeagif.com/media/8-31-2020/uczsHQ.gif" width="50%" />
 </p>
 
 ## Features
@@ -21,7 +21,7 @@ This implementation:
 - provides script for animations and generating videos.
 
 ## Google Colab
-I provide a script for model training on colab. He provides Tesla T4 GPU for free, which can train the model very quickly.
+I provide a script for model training on colab. It provides Tesla T4 GPU for free, which can train the model very quickly.
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/12wh8pFp8AVmR4Jzp1VgcrRY6f4KXch3u?usp=sharing)
 
 ## References
